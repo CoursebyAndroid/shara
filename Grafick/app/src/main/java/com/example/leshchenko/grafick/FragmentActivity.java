@@ -5,13 +5,17 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.support.v4.app.Fragment;
+import android.support.v7.widget.AppCompatButton;
 import android.text.Html;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.CompoundButton;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.widget.ToggleButton;
+
 import com.jjoe64.graphview.DefaultLabelFormatter;
 import com.jjoe64.graphview.GraphView;
 import com.jjoe64.graphview.series.DataPoint;
@@ -19,13 +23,17 @@ import com.jjoe64.graphview.series.DataPointInterface;
 import com.jjoe64.graphview.series.LineGraphSeries;
 import com.jjoe64.graphview.series.OnDataPointTapListener;
 import com.jjoe64.graphview.series.Series;
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
+import butterknife.BindView;
+import butterknife.ButterKnife;
+import butterknife.OnClick;
 
-public class FragmentActivity extends Fragment {
+
+public class FragmentActivity extends Fragment implements
+        CompoundButton.OnCheckedChangeListener{
     private final static String TAG = " FragmentActivity ";
     private final Handler mHandler = new Handler();
     private Runnable mTimer;
@@ -36,18 +44,21 @@ public class FragmentActivity extends Fragment {
     private LineGraphSeries<DataPoint> mSeries1;
     private LineGraphSeries<DataPoint> mSeries2;
     // тект над графиком
-    private TextView textPM10;
-    private  TextView textPM2 ;
-
-    ArrayList<Double>lineA;
-    ArrayList<Double>lineB;
     private int graphValueXLineA = 2;
     private int graphValueXLineB = 3;
     private String pm10;
     private String pm2;
-    private  int x = 1;
     private  double timeB;
+    private boolean flagRunable = false;
+    private int index = 0;
 
+   private  ToggleButton btn;
+
+
+    private TextView textPM2;
+
+
+    private TextView textPM10;
 
     private OnFragmentInteractionListener mListener;
 
@@ -55,7 +66,6 @@ public class FragmentActivity extends Fragment {
     public FragmentActivity() {
 
     }
-
 
     public static FragmentActivity newInstance() {
         FragmentActivity fragment = new FragmentActivity();
@@ -71,14 +81,14 @@ public class FragmentActivity extends Fragment {
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
         View rootView = inflater.inflate(R.layout.fragment, container, false);
-        final GraphView graph = (GraphView) rootView.findViewById(R.id.graph);
+        ButterKnife.bind(this,rootView);
+        textPM2 = (TextView) rootView.findViewById(R.id.text_view_pm2);
+        textPM10 = (TextView) rootView.findViewById(R.id.text_view_pm10);
+        btn = (ToggleButton) rootView.findViewById(R.id.btn);
+         GraphView graph = (GraphView) rootView.findViewById(R.id.graph);
+        btn.setOnCheckedChangeListener(this);
 
-        Log.e(TAG,"Start Date =" + DATA);
         timeA = DATA.getTime();
-        Log.e(TAG,"Start MillSec = " + timeA);
-        //Текст куда записываю рандомные числа
-         textPM10 = (TextView) rootView.findViewById(R.id.text_view_pm10);
-         textPM2 = (TextView) rootView.findViewById(R.id.text_view_pm2);
 
         //Создаю первую линию
         mSeries1 = new LineGraphSeries<>();
@@ -146,24 +156,30 @@ public class FragmentActivity extends Fragment {
     @Override
     public void onResume() {
         super.onResume();
-        try {
+       if(flagRunable) {
+            try {
                 mTimer = new Runnable() {
                     @Override
                     public void run() {
+                        if (!flagRunable) {
+                            return;
+                        }
                         date = new Date();
                         timeB = date.getTime();
                         graphValueXLineA = timer(timeA, timeB);
                         graphValueXLineB = timer(timeA, timeB) - 1;
-                        Log.e(TAG,"graphValueXLineA " + graphValueXLineA);
-                        Log.e(TAG,"graphValueXLineB " + graphValueXLineB);
+                        Log.e(TAG, "graphValueXLineA " + graphValueXLineA);
+                        Log.e(TAG, "graphValueXLineB " + graphValueXLineB);
                         mSeries1.appendData(new DataPoint(graphValueXLineA, pointYLineA()), false, 180);
                         mSeries2.appendData(new DataPoint(graphValueXLineB, pointYLineB()), false, 180);
                         mHandler.postDelayed(this, 15_000);
+                        Log.e(TAG, "run() " + flagRunable);
                     }
                 };
-          mHandler.postDelayed(mTimer, 5_000);
-            }catch(Exception e){
+                mHandler.postDelayed(mTimer, 5_000);
+            } catch (Exception e) {
                 e.printStackTrace();
+            }
         }
     }
 
@@ -178,6 +194,15 @@ public class FragmentActivity extends Fragment {
         super.onDetach();
         mListener = null;
     }
+
+    @Override
+    public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+         flagRunable = isChecked ? true : false;
+        Log.e(TAG,"flagRunable == " + flagRunable);
+        Toast.makeText(getActivity(),"Кнопка " + flagRunable,Toast.LENGTH_LONG).show();
+        onResume();
+    }
+
 
     public interface OnFragmentInteractionListener {
         void onFragmentInteraction(Uri uri);
@@ -198,12 +223,9 @@ public class FragmentActivity extends Fragment {
         return mLastRandom;
     }
     private int timer(double timeA, double timeB){
-        //double result;
         int convertTime = 0;
         convertTime += (timeB - timeA) / 1000;
         Log.e(TAG,"convertTime " + convertTime);
-       // String getStringTime = formatDuration(convertTime);
-      //  result = Double.parseDouble(getStringTime);
         return convertTime;
     }
 
